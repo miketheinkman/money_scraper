@@ -19,37 +19,68 @@ def add_page_to_db():
     password_element = raw_input("Element ID of password field: ")
     password = raw_input("Password for {0}: ".format(page_name))
     submit_element = raw_input("Submit element for {0}: ".format(page_name))
+    scrape_fields = raw_input("Class of fields to scrape: ")
 
     # Add info to site tables
     add_to_table("Pages", fields=("PageName", "PageURL", "UserElement",
-                                  "UserName", "PasswordElement", "Password", "SubmitElement"),
+                                  "UserName", "PasswordElement", "Password", "SubmitElement",
+                                  "ScrapeFields"),
                  values=(page_name, page_url, user_element, password_element,
-                         user_name, password, submit_element))
+                         user_name, password, submit_element, scrape_fields))
 
 
-def return_page_driver():
-    """Login to page using page info from page specific db"""
+def login_to_page(driver, row):
+    """Login to page using page info from page specific db entry"""
 
-    for row in select_from_table("Pages", "*"):
-        # Open page in browser
-        driver = webdriver.Firefox()
-        driver.get(row[1])
+    # Open page in browser
+    driver.get(row[1])
 
-        # allow page load
-        wait_function()
-        # wait_function()
+    # allow page load
+    wait_function()
+    # wait_function()
 
-        # enter username
-        uname_element = driver.find_element_by_id(row[2])
-        uname_element.send_keys(row[4])
+    # enter username
+    uname_element = driver.find_element_by_id(row[2])
+    uname_element.send_keys(row[4])
 
-        # enter password and submit
-        pwd_element = driver.find_element_by_id(row[3])
-        pwd_element.send_keys(row[5])
-        submit_element = driver.find_elements_by_class_name(row[6])
-        submit_element[0].click()
+    # enter password and submit
+    pwd_element = driver.find_element_by_id(row[3])
+    pwd_element.send_keys(row[5])
+    submit_element = driver.find_elements_by_class_name(row[6])
+    submit_element[0].click()
 
+
+def scrape_elements(driver, row):
+    """Select and scrape page elements from page"""
+
+    # initialize list for scraped data
+    scrape_list = []
+
+
+    scrape_list.append(driver.find_elements_by_class_name("bodytext"))
+    print "scrape_list= "
+    print scrape_list
+    return scrape_list
+
+
+def scrape_all_pages():
+    """Iterate through pages and scrape all fields"""
+
+    # initialize driver
+    driver = webdriver.Firefox()
+
+    # connect to db and read site info
+    with conn as c:
+
+        # dynamically scrape elements based on page data
+        for row in select_from_table("Pages", "*"):
+            login_to_page(driver, row)
+            data = scrape_elements(driver, row)
+
+    driver.close()
+    driver.quit()
+    return data
 
 if __name__ == "__main__":
-    add_page_to_db()
-    return_page_driver()
+    #add_page_to_db()
+    print scrape_all_pages()
